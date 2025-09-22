@@ -1,0 +1,47 @@
+[tools]
+terraform = "latest"
+usage = "latest"
+
+[tasks."terraform:init"]
+description = "Initializes a Terraform working directory"
+alias = ["tf:init"]
+run = "terraform init -upgrade=true"
+
+[tasks."terraform:format"]
+description = "Format Terraform files"
+alias = ["tf:fmt"]
+run = '''
+terraform fmt -recursive
+'''
+
+[tasks."terraform:validate"]
+description = "Validates the Terraform files"
+alias = ["tf:val"]
+run = "terraform validate"
+
+[tasks."terraform:check"]
+description = "Checks the Terraform files"
+depends = ["terraform:format", "terraform:validate"]
+alias = ["tf:check"]
+
+[tasks."terraform:plan"]
+description = "Generates an execution plan for Terraform"
+alias = ["tf:plan"]
+run = '''
+terraform plan -out "$(terraform workspace show).tfplan"
+'''
+
+[tasks."terraform:apply"]
+description = "Applies the changes required to reach the desired state of the configuration"
+alias = ["tf:apply"]
+run = "terraform apply $(terraform workspace show).tfplan"
+
+[tasks."terraform:destroy"]
+description = "Destroy Terraform-managed infrastructure"
+alias = ["tf:destroy"]
+run = "terraform destroy"
+
+[tasks."terraform:reset"]
+description = "Removes terraform init directories and statefiles and resets directory"
+alias = ["tf:reset"]
+run = "rm -rf .terraform terraform.tfstate.d"
