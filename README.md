@@ -37,7 +37,7 @@ cd terraform-roks-lab
 IBM Cloud Shell is pre-authenticated, but the Terraform IBM Cloud provider requires setting an API key for infrastructure deployment.
 
 ```bash
-ibmcloud iam api-key-create <initials>-terraform-roks-lab -d "API key for deploying ROKS lab resources" --file apikey.json 
+ibmcloud iam api-key-create <initials>-terraform-roks-lab -d "API key for deploying ROKS lab resources" --file ~/apikey.json 
 ```
 
 Retrieve the API key from the output using the `jq` tool:
@@ -70,12 +70,8 @@ existing_resource_group = "your-resource-group"
 # IBM Cloud region
 region = "us-south"
 
-# Optional: Custom prefix for resources. 
-# Uncomment and set if desired, otherwise a random prefix will be used.
-# prefix = "roks-lab"
-
-# Optional: Enable bastion host (default: false)
-enable_bastion = false
+# Tag to identify ownership
+owner_tag = "owner:your-initials"
 ```
 
 **To list resource groups:**
