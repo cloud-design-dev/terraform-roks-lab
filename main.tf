@@ -28,7 +28,7 @@ resource "ibm_is_vpc" "lab" {
 
 resource "ibm_is_public_gateway" "zones" {
   count          = length(local.vpc_zones)
-  name           = "pgw-${local.vpc_zones[count.index].zone}"
+  name           = "${local.prefix}-pgw-${count.index + 1}"
   vpc            = ibm_is_vpc.lab.id
   zone           = local.vpc_zones[count.index].zone
   resource_group = module.resource_group.resource_group_id
@@ -37,7 +37,7 @@ resource "ibm_is_public_gateway" "zones" {
 
 resource "ibm_is_subnet" "cluster" {
   count                    = length(local.vpc_zones)
-  name                     = "clsuter-subnet-${local.vpc_zones[count.index].zone}"
+  name                     = "${local.prefix}-subnet-${count.index + 1}"
   vpc                      = ibm_is_vpc.lab.id
   zone                     = local.vpc_zones[count.index].zone
   total_ipv4_address_count = 64
@@ -47,12 +47,16 @@ resource "ibm_is_subnet" "cluster" {
 }
 
 module "cos_module" {
-  source            = "terraform-ibm-modules/cos/ibm"
-  version           = "10.2.21"
-  resource_group_id = module.resource_group.resource_group_id
-  region            = var.region
-  cos_instance_name = "${local.prefix}-cos"
-  create_cos_bucket = false
+  source                   = "terraform-ibm-modules/cos/ibm"
+  version                  = "10.2.21"
+  resource_group_id        = var.create_cos_instance ? module.resource_group.resource_group_id : null
+  region                   = var.region
+  create_cos_instance      = var.create_cos_instance
+  existing_cos_instance_id = var.existing_cos_instance_id
+  cos_instance_name        = var.create_cos_instance ? local.cos_instance_name : null
+  cos_plan                 = "standard"
+  create_cos_bucket        = false
+  cos_tags                 = local.tags
 }
 
 resource "ibm_container_vpc_cluster" "cluster" {
@@ -77,4 +81,25 @@ resource "ibm_container_vpc_cluster" "cluster" {
   }
 
   tags = local.tags
+}
+
+# Get the cluster configuration
+data "ibm_container_cluster_config" "cluster_config" {
+  cluster_name_id = ibm_container_vpc_cluster.cluster.id
+  config_dir      = pathexpand("~/.kube")
+}
+
+# Read the actual kubeconfig content
+data "local_file" "kubeconfig_content" {
+  filename = data.ibm_container_cluster_config.cluster_config.config_file_path
+
+  depends_on = [data.ibm_container_cluster_config.cluster_config]
+}
+
+# Write kubeconfig to local file
+resource "local_file" "kubeconfig" {
+  content  = data.local_file.kubeconfig_content.content
+  filename = "${path.module}/kubeconfig"
+
+  depends_on = [data.local_file.kubeconfig_content]
 }

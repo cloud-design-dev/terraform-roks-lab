@@ -1,11 +1,26 @@
-# Your IBM Cloud API key
+# IBM Cloud Configuration
+# Get your API key with: ibmcloud iam api-key-create terraform-roks-lab
 ibmcloud_api_key = "your-api-key-here"
 
-# Existing resource group name
+# Existing resource group (list with: ibmcloud resource groups)
 existing_resource_group = "your-resource-group"
 
 # IBM Cloud region
 region = "us-south"
 
-# Tag to identify ownership
+# Owner tag for resource identification
 owner_tag = "owner:your-initials"
+
+# Cloud Object Storage Configuration
+# Option 1: Create new COS instance (default)
+create_cos_instance = true
+
+# Option 2: Use existing COS instance (uncomment and set ID)
+# create_cos_instance = false
+# existing_cos_instance_id = "crn:v1:bluemix:public:cloud-object-storage:global:a:account-id:instance-id::"
+
+# Optional: Custom COS instance name (auto-generated if not specified)
+# cos_instance_name = "my-roks-cos"
+
+# Optional: VPC configuration
+vpc_address_prefix = "auto"
