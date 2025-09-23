@@ -12,4 +12,7 @@ locals {
     "workspace:${terraform.workspace}",
     var.owner_tag,
   ]
+
+  # Cloud Object Storage configuration
+  cos_instance_name = var.cos_instance_name != null ? var.cos_instance_name : "${local.prefix}-cos"
 }

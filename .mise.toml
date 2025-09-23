@@ -1,0 +1,133 @@
+[tools]
+terraform = "1.9.8"
+jq = "1.7.1"
+kubectl = "1.31.0"
+
+[tasks."terraform:init"]
+description = "Initializes a Terraform working directory"
+alias = ["tf:init"]
+run = "terraform init -upgrade=true"
+
+[tasks."terraform:format"]
+description = "Format Terraform files"
+alias = ["tf:fmt"]
+run = '''
+terraform fmt -recursive
+'''
+
+[tasks."terraform:validate"]
+description = "Validates the Terraform files"
+alias = ["tf:val"]
+run = "terraform validate"
+
+[tasks."terraform:check"]
+description = "Checks the Terraform files"
+depends = ["terraform:format", "terraform:validate"]
+alias = ["tf:check"]
+
+[tasks."terraform:plan"]
+description = "Generates an execution plan for Terraform"
+alias = ["tf:plan"]
+run = '''
+terraform plan -out "$(terraform workspace show).tfplan"
+'''
+
+[tasks."terraform:apply"]
+description = "Applies the changes required to reach the desired state of the configuration"
+alias = ["tf:apply"]
+run = "terraform apply $(terraform workspace show).tfplan"
+
+[tasks."terraform:destroy"]
+description = "Destroy Terraform-managed infrastructure"
+alias = ["tf:destroy"]
+run = "terraform destroy"
+
+[tasks."terraform:reset"]
+description = "Removes terraform init directories and statefiles and resets directory"
+alias = ["tf:reset"]
+run = "rm -rf .terraform terraform.tfstate.d"
+
+[tasks."cluster:config"]
+description = "Configure kubectl to use the ROKS cluster by merging with existing config"
+alias = ["k8s:config"]
+run = '''
+if [ ! -f "./kubeconfig" ]; then
+  echo "kubeconfig file not found. Run terraform apply first."
+  exit 1
+fi
+
+# Ensure ~/.kube directory exists
+mkdir -p ~/.kube
+
+# Check if existing kubeconfig exists
+if [ -f ~/.kube/config ]; then
+  echo "Backing up existing kubeconfig to ~/.kube/config.backup"
+  cp ~/.kube/config ~/.kube/config.backup
+
+  # Merge configurations
+  echo "Merging ROKS cluster config with existing kubeconfig..."
+  KUBECONFIG=~/.kube/config:./kubeconfig kubectl config view --flatten > ~/.kube/config.tmp
+  mv ~/.kube/config.tmp ~/.kube/config
+  echo "Successfully merged ROKS cluster config with existing kubeconfig"
+else
+  echo "No existing kubeconfig found, copying ROKS cluster config..."
+  cp ./kubeconfig ~/.kube/config
+  echo "ROKS cluster config copied to ~/.kube/config"
+fi
+
+# Set the context to the ROKS cluster (prefer IAM authenticated context)
+CLUSTER_NAME=$(terraform output -raw cluster_name 2>/dev/null || echo "mtlf-roks")
+CLUSTER_ID=$(terraform output -raw cluster_id 2>/dev/null || echo "d38i65kw0lbbddi78pr0")
+
+# Look for IAM authenticated context first (any IBM Cloud cluster)
+IAM_CONTEXT=$(kubectl config get-contexts -o name | grep "containers-cloud-ibm-com.*IAM" | head -1)
+if [ -n "$IAM_CONTEXT" ]; then
+  kubectl config use-context "$IAM_CONTEXT"
+  echo "Switched to IAM authenticated ROKS cluster context: $IAM_CONTEXT"
+else
+  # Fall back to any context with the cluster name
+  CONTEXT_NAME=$(kubectl config get-contexts -o name | grep "$CLUSTER_NAME" | head -1)
+  if [ -n "$CONTEXT_NAME" ]; then
+    kubectl config use-context "$CONTEXT_NAME"
+    echo "Switched to ROKS cluster context: $CONTEXT_NAME"
+  else
+    echo "Warning: Could not find ROKS cluster context, using current context"
+  fi
+fi
+
+echo ""
+echo "Cluster info:"
+kubectl cluster-info
+echo ""
+echo "Available contexts:"
+kubectl config get-contexts
+'''
+
+[tasks."cluster:switch"]
+description = "Switch to the ROKS cluster context (prefer IAM authenticated)"
+alias = ["k8s:switch"]
+run = '''
+CLUSTER_NAME=$(terraform output -raw cluster_name 2>/dev/null || echo "mtlf-roks")
+CLUSTER_ID=$(terraform output -raw cluster_id 2>/dev/null || echo "d38i65kw0lbbddi78pr0")
+
+# Look for IAM authenticated context first (any IBM Cloud cluster)
+IAM_CONTEXT=$(kubectl config get-contexts -o name | grep "containers-cloud-ibm-com.*IAM" | head -1)
+if [ -n "$IAM_CONTEXT" ]; then
+  kubectl config use-context "$IAM_CONTEXT"
+  echo "Switched to IAM authenticated ROKS cluster context: $IAM_CONTEXT"
+  kubectl cluster-info
+else
+  # Fall back to any context with the cluster name
+  CONTEXT_NAME=$(kubectl config get-contexts -o name | grep "$CLUSTER_NAME" | head -1)
+  if [ -n "$CONTEXT_NAME" ]; then
+    kubectl config use-context "$CONTEXT_NAME"
+    echo "Switched to ROKS cluster context: $CONTEXT_NAME"
+    kubectl cluster-info
+  else
+    echo "Error: Could not find ROKS cluster context"
+    echo "Available contexts:"
+    kubectl config get-contexts
+    exit 1
+  fi
+fi
+'''

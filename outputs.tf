@@ -1,3 +1,4 @@
+# VPC Outputs
 output "vpc_id" {
   description = "ID of the created VPC"
   value       = ibm_is_vpc.lab.id
@@ -13,16 +14,23 @@ output "subnet_ids" {
   value       = ibm_is_subnet.cluster[*].id
 }
 
+# Cloud Object Storage Outputs
 output "cos_instance_crn" {
   description = "CRN of the Cloud Object Storage instance"
   value       = module.cos_module.cos_instance_crn
 }
 
-output "resource_group_id" {
-  description = "ID of the resource group"
-  value       = module.resource_group.resource_group_id
+output "cos_instance_id" {
+  description = "ID of the Cloud Object Storage instance"
+  value       = module.cos_module.cos_instance_id
 }
 
+output "cos_instance_name" {
+  description = "Name of the Cloud Object Storage instance"
+  value       = module.cos_module.cos_instance_name
+}
+
+# ROKS Cluster Outputs
 output "cluster_id" {
   description = "ID of the ROKS cluster"
   value       = ibm_container_vpc_cluster.cluster.id
@@ -33,8 +41,12 @@ output "cluster_name" {
   value       = ibm_container_vpc_cluster.cluster.name
 }
 
-# output "kube_config" {
-#   description = "Kube config for the ROKS cluster"
-#   value       = ibm_container_vpc_cluster.cluster.kube_config.0.raw
-#   sensitive   = true
-# }
+output "kubeconfig_path" {
+  description = "Path to the kubeconfig file"
+  value       = local_file.kubeconfig.filename
+}
+
+output "cluster_status" {
+  description = "Status of the ROKS cluster"
+  value       = ibm_container_vpc_cluster.cluster.state
+}
