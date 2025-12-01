@@ -62,7 +62,7 @@ module "cos_module" {
 resource "ibm_container_vpc_cluster" "cluster" {
   name                                = "${local.prefix}-roks"
   vpc_id                              = ibm_is_vpc.lab.id
-  kube_version                        = "4.18.21_openshift"
+  kube_version                        = var.roks_version
   flavor                              = "bx2.4x16"
   worker_count                        = "1"
   entitlement                         = "cloud_pak"
