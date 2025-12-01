@@ -48,3 +48,9 @@ variable "cos_instance_name" {
   type        = string
   default     = null
 }
+
+variable "roks_version" {
+type = string
+description = "Version of OCP to deploy"
+ default = "4.18.27_openshift"
+}
